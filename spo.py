@@ -1,4 +1,3 @@
-import msvcrt as wind
 import sqlite3
 import spotipy.util as util
 import spotipy
@@ -8,23 +7,31 @@ import time
 
 #global variables
 username = ""
+sp = None
+cursor = None
+connection = None
 
 
 #all my funtions
 def close():
     print("Press Enter to close..."),
-    wind.getch()
+    input()
 
 def f_getUser():
     global username
+    
     username = input("Username: ")
 
 
 def f_close_db():
+    global connection
+    
     connection.commit()
     connection.close()
 
 def f_create_tables():
+    global cursor
+    
     sql_command = "CREATE TABLE IF NOT EXISTS mysongs (id INTEGER PRIMARY KEY, title VARCHAR(100), interpret VARCHAR(20), urli VARCHAR(25), added DATE, added_db DATE)" # add favourite songs DB
     cursor.execute(sql_command)
     sql_command = "CREATE TABLE IF NOT EXISTS playlist (id INTEGER PRIMARY KEY, spot_id VARCHAR(30), title VARCHAR(40), follow VARCHAR(5), added_db DATE)" # add playlists DB
@@ -35,6 +42,8 @@ def f_create_tables():
     cursor.execute(sql_command)
 
 def f_getSongs():
+    global cursor
+    
     print("Fetching your favourite songs...")
     date = str(datetime.date.today())
     i = 0
@@ -65,6 +74,8 @@ def f_getSongs():
     print("Completed! ",a-1," Songs")
 
 def f_getPlaylists():
+    global cursor
+    
     print("Fetching your Playlists...\n")
     date = str(datetime.date.today())
     i = 0
@@ -88,11 +99,13 @@ def f_getPlaylists():
         cursor.execute(sql_command)
         f_getPlSongs(playlist['uri'][17:], date, name)
         a+=1
-    print("\nCompleted! ",a-1," Playlists")
+    print("\nCompleted!",a-1,"Playlists total")
     
 
 
 def f_getPlSongs(pl_id, date, pl_name):
+    global cursor
+
     print("Adding songs to "+pl_name+" Playlist...")
     i = 0
     pltracks = sp.user_playlist_tracks(username, playlist_id=pl_id, limit=100, offset=0);
@@ -113,26 +126,30 @@ def f_getPlSongs(pl_id, date, pl_name):
         soid = str(cursor.fetchone()[0])
         sql_command = "INSERT INTO song_pl_connection (id_pl, id_songs, added_db) VALUES ('"+plid+"', '"+soid+"', '"+date+"')"
         cursor.execute(sql_command)
-    print("Completed Playlist with ",i," songs!\n")
+    print("Completed Playlist with",i,"songs!\n")
         
 
 
 def main():
-    print("Hallo Elias")
+    global username
+    print(f'Hello {username}')
     f_create_tables()
     f_getSongs()
     f_getPlaylists()
     f_close_db()
     close()
 
-#main function
-f_getUser()
-scope = 'user-library-read'
-token = util.prompt_for_user_token(username,scope,client_id='7168eed54b2f48a8a5d80eae42a5e31f',client_secret='6965fe3d31ba41ac8ba91ef095660833',redirect_uri='http://localhost:8888/callback/')
-sp = spotipy.Spotify(auth=token)
-connection = sqlite3.connect("spotify_"+username+".db")
-cursor = connection.cursor()
-main()
+def setup():
+    global sp
+    global cursor
+    global connection
+    f_getUser()
+    scope = 'user-library-read'
+    token = util.prompt_for_user_token(username,scope,client_id='7168eed54b2f48a8a5d80eae42a5e31f',client_secret='6965fe3d31ba41ac8ba91ef095660833',redirect_uri='http://localhost:8888/callback/')
+    sp = spotipy.Spotify(auth=token)
+    connection = sqlite3.connect("spotify_"+username+".db")
+    cursor = connection.cursor()
 
-
-
+if __name__ == "__main__":
+    setup()
+    main()

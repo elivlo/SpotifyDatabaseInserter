@@ -1,3 +1,5 @@
 *.db
 .cache-elivlo
 .cache*
+
+venv/
