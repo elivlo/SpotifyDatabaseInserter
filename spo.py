@@ -7,6 +7,9 @@ import time
 
 #global variables
 username = ""
+client_id='youtclientid'
+client_secret='yourclientsecret'
+redirect_uri='http://localhost:8888/callback/'
 sp = None
 cursor = None
 connection = None
@@ -145,7 +148,7 @@ def setup():
     global connection
     f_getUser()
     scope = 'user-library-read'
-    token = util.prompt_for_user_token(username,scope,client_id='7168eed54b2f48a8a5d80eae42a5e31f',client_secret='6965fe3d31ba41ac8ba91ef095660833',redirect_uri='http://localhost:8888/callback/')
+    token = util.prompt_for_user_token(username,scope,client_id=client_id,client_secret=client_secret,redirect_uri=redirect_uri)
     sp = spotipy.Spotify(auth=token)
     connection = sqlite3.connect("spotify_"+username+".db")
     cursor = connection.cursor()
