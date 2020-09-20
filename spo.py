@@ -4,11 +4,21 @@ import spotipy.util as util
 import spotipy
 import datetime
 import time
+import getopt, sys
 
 
-#global variables
-username = ""
+class ImpVars:
+    username = ""
+    scope = 'user-library-read'
+    
+    client_id='7168eed54b2f48a8a5d80eae42a5e31f'
+    client_secret='6965fe3d31ba41ac8ba91ef095660833'
+    redirect_uri='http://localhost:8888/callback/'
 
+    def __init__(self, username):
+        self.username = username
+        self.token = util.prompt_for_user_token(username,self.scope,client_id=client_id,client_secret=client_secret,redirect_uri=redirect_uri)
+        self.sp = spotipy.Spotify(auth=self.token)
 
 #all my funtions
 def close():
@@ -16,123 +26,46 @@ def close():
     wind.getch()
 
 def f_getUser():
-    global username
-    username = input("Username: ")
+    return input("Username: ")
 
+def printHelp():
+    print("Huhu")
 
-def f_close_db():
-    connection.commit()
-    connection.close()
+def f_inputHandler():
+    ###############
+    optionsS = "hiou"
+    optionsL = ["help", "input ", "output ", "user "]
+    fullArgs = sys.argv[1:]
 
-def f_create_tables():
-    sql_command = "CREATE TABLE IF NOT EXISTS mysongs (id INTEGER PRIMARY KEY, title VARCHAR(100), interpret VARCHAR(20), urli VARCHAR(25), added DATE, added_db DATE)" # add favourite songs DB
-    cursor.execute(sql_command)
-    sql_command = "CREATE TABLE IF NOT EXISTS playlist (id INTEGER PRIMARY KEY, spot_id VARCHAR(30), title VARCHAR(40), follow VARCHAR(5), added_db DATE)" # add playlists DB
-    cursor.execute(sql_command)
-    sql_command = "CREATE TABLE IF NOT EXISTS songs_pl (id INTEGER PRIMARY KEY, title VARCHAR(100), interpret VARCHAR(20), urli VARCHAR(25), added DATE, added_db DATE)" # add playlist songs DB
-    cursor.execute(sql_command)
-    sql_command = "CREATE TABLE IF NOT EXISTS song_pl_connection (id INTEGER PRIMARY KEY, id_pl INTEGER, id_songs INTEGER, added_db DATE)" # add playlist song connection DB
-    cursor.execute(sql_command)
+    try:
+        arguments, values = getopt.getopt(fullArgs, optionsS, optionsL)
+    except getopt.error as err:
+        # output error, and return with an error code
+        print (str(err))
+        sys.exit(2)
+    ###############
+    for currentArgument, currentValue in arguments:
+        if currentArgument in ("-i", "/i"):
+            print (("enabling input mode (%s)") % (currentValue))
+        elif currentArgument in ("-h", "/h"):
+            print ("displaying help")
+        elif currentArgument in ("-o", "/o"):
+            print (("enabling special output mode (%s)") % (currentValue))
+        elif currentArgument in ("-u", "/u"):
+            print (("username: (%s)") % (currentValue))
 
-def f_getSongs():
-    print("Fetching your favourite songs...")
-    date = str(datetime.date.today())
-    i = 0
-    a = 1
-    while len(sp.current_user_saved_tracks(limit=50, offset=i*50)['items']) >= 50 :
-        results = sp.current_user_saved_tracks(limit=50, offset=i*50)
-        #print(results['items'][0]) print first "song"
-        i+=1
-        for item in results['items']:
-            track = item['track']
-            date_added = item['added_at'][:10]
-            name =  track['name'].replace("'", " ")
-            artist = track['artists'][0]['name'].replace("'", " ")
-            sql_command = "INSERT INTO mysongs (title, interpret, urli, added, added_db) VALUES ('"+name+"', '"+artist+"', '"+track['uri'][14:]+"', "+date_added+", "+date+")"# add songs to db
-            #print(sql_command)
-            cursor.execute(sql_command)
-            a+=1
-
-    results = sp.current_user_saved_tracks(limit=50, offset=i*50)
-    for item in results['items']:
-        track = item['track']
-        date_added = item['added_at'][:10]
-        name =  track['name'].replace("'", " ")
-        artist = track['artists'][0]['name'].replace("'", " ")
-        sql_command = "INSERT INTO mysongs (title, interpret, urli, added, added_db) VALUES ('"+name+"', '"+artist+"', '"+track['uri'][14:]+"', "+date_added+", "+date+")"# add songs to db
-        cursor.execute(sql_command)
-        a+=1
-    print("Completed! ",a-1," Songs")
-
-def f_getPlaylists():
-    print("Fetching your Playlists...\n")
-    date = str(datetime.date.today())
-    i = 0
-    a = 1
-    while len(sp.current_user_playlists(limit=50, offset=i*50)['items']) >= 50 :
-        playlists = sp.current_user_playlists(limit=50, offset=i*50)
-        i+=1
-        for playlist in playlists['items']:
-            #print(a, playlist['name'])
-            name = playlist['name'].replace("'", " ")
-            sql_command = "INSERT INTO playlist (spot_id, title, added_db) VALUES ('"+playlist['uri'][17:]+"', '"+name+"', '"+date+"')"# add songs to db
-            cursor.execute(sql_command)
-            f_getPlSongs(playlist['uri'][17:], date, name)
-            a+=1
-        
-    playlists = sp.current_user_playlists(limit=50, offset=i*50)
-    for playlist in playlists['items']:
-        #print(a, playlist['name'])
-        name = playlist['name'].replace("'", " ")
-        sql_command = "INSERT INTO playlist (spot_id, title, added_db) VALUES ('"+playlist['uri'][17:]+"', '"+name+"', '"+date+"')"# add songs to db
-        cursor.execute(sql_command)
-        f_getPlSongs(playlist['uri'][17:], date, name)
-        a+=1
-    print("\nCompleted! ",a-1," Playlists")
-    
-
-
-def f_getPlSongs(pl_id, date, pl_name):
-    print("Adding songs to "+pl_name+" Playlist...")
-    i = 0
-    pltracks = sp.user_playlist_tracks(username, playlist_id=pl_id, limit=100, offset=0);
-    sql_command = "SELECT id from playlist WHERE spot_id='"+pl_id+"'"# add songs to db
-    cursor.execute(sql_command)
-    plid = str(cursor.fetchone()[0])
-    date = str(datetime.date.today())
-    for item in pltracks['items']:
-        i+=1
-        track = item['track']
-        date_added = item['added_at'][:10]
-        name =  track['name'].replace("'", " ")
-        artist = track['artists'][0]['name'].replace("'", " ")
-        sql_command = "INSERT INTO songs_pl (title, interpret, urli, added, added_db) VALUES ('"+name+"', '"+artist+"', '"+track['uri'][14:]+"', '"+date_added+"', '"+date+"')"# add songs to db
-        cursor.execute(sql_command)
-        sql_command = "SELECT id from songs_pl WHERE title='"+name+"'"# add songs to db
-        cursor.execute(sql_command)
-        soid = str(cursor.fetchone()[0])
-        sql_command = "INSERT INTO song_pl_connection (id_pl, id_songs, added_db) VALUES ('"+plid+"', '"+soid+"', '"+date+"')"
-        cursor.execute(sql_command)
-    print("Completed Playlist with ",i," songs!\n")
-        
-
-
-def main():
-    print("Hallo Elias")
-    f_create_tables()
-    f_getSongs()
-    f_getPlaylists()
-    f_close_db()
-    close()
+#def main():
+    #f_create_tables()
+    #f_getSongs()
+    #f_getPlaylists()
+    #f_close_db()
 
 #main function
-f_getUser()
-scope = 'user-library-read'
-token = util.prompt_for_user_token(username,scope,client_id='7168eed54b2f48a8a5d80eae42a5e31f',client_secret='6965fe3d31ba41ac8ba91ef095660833',redirect_uri='http://localhost:8888/callback/')
-sp = spotipy.Spotify(auth=token)
-connection = sqlite3.connect("spotify_"+username+".db")
-cursor = connection.cursor()
-main()
+if __name__ == '__main__':
+    #vm = ImpVars(f_getUser())
+    f_inputHandler()
+    #main()
+    #close()
 
 
 
