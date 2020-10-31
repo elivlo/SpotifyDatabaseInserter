@@ -7,8 +7,8 @@ import time
 
 #global variables
 username = ""
-client_id='youtclientid'
-client_secret='yourclientsecret'
+client_id='7168eed54b2f48a8a5d80eae42a5e31f'
+client_secret='586618bebddd48e9ab94433057b41b4d'
 redirect_uri='http://localhost:8888/callback/'
 sp = None
 cursor = None
